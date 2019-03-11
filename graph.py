@@ -65,7 +65,7 @@ assert dijkstra({
 }, orig='a', dest='c') == ('a', 'e', 'd', 'b', 'c')
 
 
-def a_star(orig, dest, barriers):
+def a_star(orig, dest, barriers=(), borders=(100, 100)):
     neighbourgs = defaultdict(list)
     distances = {}
     costs = {}
@@ -76,7 +76,11 @@ def a_star(orig, dest, barriers):
         if node not in neighbourgs.keys():
             x, y = node
             for neighbourg in [(x, y-1), (x, y+1), (x-1, y), (x+1, y)]:
-                if neighbourg not in barriers:
+                if (
+                    neighbourg not in barriers
+                    and neighbourg[0] in range(borders[0])
+                    and neighbourg[1] in range(borders[1])
+                ):
                     neighbourgs[node].append(neighbourg)
         return neighbourgs[node]
 
@@ -118,9 +122,9 @@ def a_star(orig, dest, barriers):
     return None
 
 
-assert a_star((0, 0), (0, 3), []) == ((0, 0), (0, 1), (0, 2), (0, 3))
-assert a_star((0, 0), (0, -3), []) == ((0, 0), (0, -1), (0, -2), (0, -3))
-assert a_star((0, 0), (1, 3), []) == ((0, 0), (0, 1), (0, 2), (0, 3), (1, 3))
+assert a_star((1, 0), (1, 3)) == ((1, 0), (1, 1), (1, 2), (1, 3))
+assert a_star((1, 3), (1, 0)) == ((1, 3), (1, 2), (1, 1), (1, 0))
+assert a_star((1, 0), (2, 3)) == ((1, 0), (1, 1), (1, 2), (1, 3), (2, 3))
 # with barrier
-assert a_star((0, 0), (0, 3), [(0, 2)]) == ((0, 0), (0, 1), (-1, 1), (-1, 2), (-1, 3), (0, 3))
-assert a_star((0, 0), (1, 3), [(0, 2)]) == ((0, 0), (0, 1), (1, 1), (1, 2), (1, 3))
+assert a_star((1, 0), (1, 3), barriers=((1, 2),)) == ((1, 0), (1, 1), (0, 1), (0, 2), (0, 3), (1, 3))
+assert a_star((1, 0), (2, 3), barriers=((1, 2),)) == ((1, 0), (1, 1), (2, 1), (2, 2), (2, 3))
