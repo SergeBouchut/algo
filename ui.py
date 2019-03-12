@@ -67,7 +67,7 @@ def edit_tree(map_, trees, bot):
 
 def spawn_trees(map_, tree_count, map_x, map_y):
     trees = set()
-    while len(trees) < tree_count:
+    while len(trees) < tree_count + 1:
         trees.add((random.randint(0, map_x - 1),
                    random.randint(0, map_y - 1)))
     return trees
