@@ -1,3 +1,4 @@
+import random
 import sys
 import time
 
@@ -6,53 +7,85 @@ import pygame
 from graph import a_star
 
 
+MOUSE_LEFT_CLICK = 1
+MOUSE_MIDDLE_CLICK = 2
+MOUSE_RIGHT_CLICK = 3
+
 CELL_SIZE = 120
 BACKGROUND_COLOR = (245, 222, 179)  # SAND
-
-BORDERS = (10, 6)
-TREES = [(1, 3), (2, 4), (5, 3), (6, 3), (6, 2),
-         (6, 1), (4, 0), (4, 1), (3, 1), (3, 3)]
-START = (2, 2)
 
 
 def get_cell(x, y):
     return pygame.Rect((x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
 
-def init():
-    pygame.init()
-    x, y = BORDERS
-    map_ = pygame.display.set_mode((x * CELL_SIZE, y * CELL_SIZE))
+
+def get_coord(x, y):
+    return int(x / CELL_SIZE), int(y / CELL_SIZE)
+
+
+def render_map(map_, trees, bot):
     map_.fill(BACKGROUND_COLOR)
-    for tree in TREES:
+    for tree in trees:
         map_.blit(pygame.image.load("tree.png"), get_cell(*tree))
-    bot = START
-    bot_cell = get_cell(*bot)
-    map_.blit(pygame.image.load("bot.png"), bot_cell)
+    map_.blit(pygame.image.load("bot.png"), get_cell(*bot))
     pygame.display.update()
-    return map_, bot_cell, bot
 
-def render(map_, bot_cell, bot):
-    map_.fill(BACKGROUND_COLOR, bot_cell)
-    new_bot_cell = get_cell(*bot)
-    map_.blit(pygame.image.load("bot.png"), new_bot_cell)
-    pygame.display.update([bot_cell, new_bot_cell])
-    return new_bot_cell
 
-def move(map_, bot_cell, bot):
-    x, y = pygame.mouse.get_pos()
-    dest = (int(x / CELL_SIZE), int(y / CELL_SIZE))
-    path = a_star(bot, dest, TREES, BORDERS) or ()
+def render_cells(coords, map_, trees, bot):
+    cells = []
+    for coord in coords:
+        cell = get_cell(*coord)
+        map_.fill(BACKGROUND_COLOR, cell)
+        if coord in trees:
+            map_.blit(pygame.image.load("tree.png"), cell)
+        if coord == bot:
+            map_.blit(pygame.image.load("bot.png"), cell)
+        cells.append(cell)
+    pygame.display.update(cells)
+
+
+def move_bot(map_, trees, bot, map_x, map_y):
+    target = get_coord(*pygame.mouse.get_pos())
+    path = a_star(bot, target, trees, (map_x, map_y)) or ()
     for step in path:
+        render_cells([bot, step], map_, trees, step)
         bot = step
-        bot_cell = render(map_, bot_cell, bot)
         time.sleep(0.1)
-    return bot_cell, bot
+    return bot
 
 
-map_, bot_cell, bot = init()
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.MOUSEBUTTONUP:
-            bot_cell, bot = move(map_, bot_cell, bot)
-        if event.type == pygame.QUIT:
-            sys.exit()
+def edit_tree(map_, trees, bot):
+    target = get_coord(*pygame.mouse.get_pos())
+    if target == bot:
+        return
+    if target in trees:
+        trees.remove(target)
+    else:
+        trees.add(target)
+    render_cells([target], map_, trees, bot)
+
+
+def spawn_trees(map_, tree_count, map_x, map_y):
+    trees = set()
+    while len(trees) < tree_count:
+        trees.add((random.randint(0, map_x - 1),
+                   random.randint(0, map_y - 1)))
+    return trees
+
+
+if __name__ == "__main__":
+    map_x, map_y, tree_count = [int(arg) for arg in sys.argv[1:]]
+    pygame.init()
+    map_ = pygame.display.set_mode((map_x * CELL_SIZE, map_y * CELL_SIZE))
+    trees = spawn_trees(map_, tree_count, map_x, map_y)
+    bot = trees.pop()
+    render_map(map_, trees, bot)
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONUP:
+                if event.button == MOUSE_LEFT_CLICK:
+                    bot = move_bot(map_, trees, bot, map_x, map_y)
+                elif event.button == MOUSE_RIGHT_CLICK:
+                    edit_tree(map_, trees, bot)
+            if event.type == pygame.QUIT:
+                sys.exit()
